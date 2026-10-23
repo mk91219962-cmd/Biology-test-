@@ -1,0 +1,492 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>امتحان الأحياء المتقدم - الدعامة والهرمونات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --bg-dark: #0a0a0a;
+            --bg-panel: #141414;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-blue); }
+
+        .glass-panel {
+            background: var(--bg-panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.05);
+            border-radius: 1rem;
+        }
+
+        /* Neon Button Styling */
+        .btn-neon {
+            background: linear-gradient(45deg, #0052d4, #4364f7, #6fb1fc);
+            background-size: 200% 200%;
+            animation: gradientBG 5s ease infinite;
+            box-shadow: 0 0 15px rgba(67, 100, 247, 0.5);
+            transition: all 0.3s ease;
+        }
+        .btn-neon:hover {
+            box-shadow: 0 0 25px rgba(67, 100, 247, 0.8);
+            transform: translateY(-2px);
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Options Styling */
+        .option-btn {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 10px rgba(188, 19, 254, 0.3);
+            transform: translateX(-5px);
+        }
+        .option-btn.correct {
+            background-color: rgba(34, 197, 94, 0.2) !important;
+            border-color: #22c55e !important;
+            color: #4ade80 !important;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+        }
+        .option-btn.wrong {
+            background-color: rgba(239, 68, 68, 0.1) !important;
+            border-color: #ef4444 !important;
+            color: #f87171 !important;
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Toast Animation */
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            bottom: -50px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 30px;
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        /* Loader */
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: var(--neon-blue);
+            border-right-color: var(--neon-purple);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Timer Pulse */
+        .timer-danger {
+            color: #ef4444 !important;
+            animation: pulseText 1s infinite alternate;
+        }
+        @keyframes pulseText { from { opacity: 1; } to { opacity: 0.5; text-shadow: 0 0 10px red; } }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed left-1/2 transform -translate-x-1/2 z-50 bg-red-900/90 border border-red-500 text-white px-6 py-3 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.5)] font-bold flex items-center gap-3 backdrop-blur-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span id="toast-msg" class="tracking-wide">إجابة خاطئة، لديك محاولة أخيرة!</span>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="flex-grow flex items-center justify-center p-4 fade-in">
+        <div class="glass-panel w-full max-w-lg p-8 md:p-10 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+            
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
+                اختبار الأحياء الاحترافي
+            </h1>
+            <p class="text-gray-400 mb-8 text-sm md:text-base leading-relaxed">
+                الفصل الأول والثاني (مستويات عليا).<br>
+                <span class="text-cyan-400 font-bold">50 سؤالاً | 45 دقيقة | محاولتان لكل سؤال</span>
+            </p>
+            
+            <div class="mb-8 text-right">
+                <label class="block text-gray-400 text-sm font-bold mb-2" for="student-name">الاسم الثلاثي:</label>
+                <input type="text" id="student-name" placeholder="أدخل اسمك هنا..." class="w-full px-5 py-4 rounded-xl bg-[#0a0a0a] border border-gray-700 focus:outline-none focus:border-purple-500 text-white placeholder-gray-600 transition shadow-inner">
+                <p id="name-error" class="text-red-400 text-sm mt-2 hidden transition-all">يرجى كتابة اسمك للمتابعة!</p>
+            </div>
+            
+            <button onclick="startExam()" class="btn-neon w-full text-white font-bold py-4 px-6 rounded-xl text-lg flex justify-center items-center gap-2">
+                <span>بدء الامتحان</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="flex-grow hidden flex-col p-4 md:p-6 max-w-4xl mx-auto w-full fade-in">
+        
+        <!-- Top Bar -->
+        <div class="flex justify-between items-center bg-[#141414] p-4 rounded-2xl border border-gray-800 shadow-lg mb-6">
+            <div class="flex items-center gap-3 text-cyan-400 font-bold text-xl md:text-2xl bg-black/50 px-4 py-2 rounded-lg border border-cyan-900/50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="timer">45:00</span>
+            </div>
+            <div class="text-gray-400 font-semibold text-lg bg-black/50 px-4 py-2 rounded-lg border border-gray-800">
+                سؤال <span id="current-q-num" class="text-purple-400 font-bold text-xl">1</span> / 50
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-900 rounded-full h-2 mb-8 border border-gray-800 overflow-hidden relative">
+            <div id="progress-bar" class="absolute top-0 right-0 h-full bg-gradient-to-l from-cyan-400 to-purple-500 transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- Question Area -->
+        <div class="glass-panel p-6 md:p-8 flex-grow flex flex-col justify-center">
+            <h2 id="question-text" class="text-xl md:text-2xl font-bold leading-loose mb-8 text-gray-100">
+                <!-- Question Text -->
+            </h2>
+            
+            <div id="options-container" class="space-y-4 flex-col flex">
+                <!-- Options injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="flex-grow hidden flex-col items-center justify-center p-4 fade-in">
+        <div class="loader mb-6"></div>
+        <h2 class="text-2xl font-bold text-cyan-400 mb-2">جاري تسليم الإجابات...</h2>
+        <p class="text-gray-500 text-sm">يتم الآن تقييم مستواك وإرسال التقرير للمعلم، يرجى الانتظار.</p>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="flex-grow hidden flex-col items-center justify-center p-4 fade-in">
+        <div class="glass-panel w-full max-w-lg p-10 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-cyan-500"></div>
+            
+            <div class="w-24 h-24 mx-auto bg-green-500/10 rounded-full flex items-center justify-center mb-6 border border-green-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            
+            <h1 class="text-3xl font-bold text-white mb-2">تم إنهاء الامتحان بنجاح!</h1>
+            <h2 class="text-xl text-gray-400 mb-8" id="student-name-display"></h2>
+            
+            <div class="bg-black/50 p-8 rounded-2xl border border-gray-800 mb-8">
+                <p class="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wider">النسبة المئوية</p>
+                <p id="final-percentage" class="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 drop-shadow-lg"></p>
+            </div>
+            
+            <p class="text-gray-400 text-sm leading-relaxed">
+                شكراً لك. تم إرسال تقرير مفصل بمحاولاتك وإجاباتك إلى المعلم.<br>يمكنك الآن إغلاق هذه الصفحة.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const FORMSPREE_URL = 'https://formspree.io/f/mvkganog'; // الرابط الخاص بك
+
+        // 50 Advanced Questions (Chapters 1 & 2)
+        const questions = [
+            // الدعامة والحركة
+            { q: "عند وضع خلية نباتية حية ضغطها الإسموزي يعادل 5% سكروز في محلول تركيزه 5%، ثم أُضيف إنزيم يحلل السكروز بالكامل للمحلول الخارجي، ما التغير الذي يطرأ على الخلية؟", options: ["تفقد دعامتها الفسيولوجية وتنكمش", "تكتسب دعامة فسيولوجية وتنتفخ", "لا يحدث أي تغير في الحجم", "تتحول الدعامة الفسيولوجية إلى تركيبية"], answer: "تفقد دعامتها الفسيولوجية وتنكمش" },
+            { q: "لييفة عضلية تتكون من 20 منطقة شبه مضيئة (H) في حالة انبساط تام، إذا انقبضت انقباضاً أقصى، كم يصبح مجموع المناطق المضيئة غير الكاملة والداكنة وشبه المضيئة معاً؟", options: ["20", "22", "40", "42"], answer: "22" },
+            { q: "أي الأنسجة النباتية يتساوى فيه الضغط الإسموزي للفجوة مع ضغط الامتلاء عند وضعها في ماء مقطر، رغم احتوائها على دعامة تركيبية؟", options: ["الخلايا الكولنشيمية بالساق", "الخلايا الإسكلرنشيمية", "أوعية الخشب", "الخلايا الفلينية"], answer: "الخلايا الكولنشيمية بالساق" },
+            { q: "عضلة هيكلية بها 600 ليفة عضلية، وتحتوي على أقل عدد ممكن من الوحدات الحركية. إذا تم تنبيه نصف الألياف العصبية الحركية المغذية لها فقط، كم عدد الوصلات التي يتحرر فيها الأسيتيل كولين؟", options: ["300", "3", "600", "150"], answer: "300" },
+            { q: "إذا كان رقم الفقرة العظمية المتمفصلة مع زوج الضلوع العائم الأول هو X، فما رقم الفقرة التي تنصف العمود الفقري عددياً؟", options: ["X - 3", "X - 4", "X - 1", "X - 2"], answer: "X - 3" },
+            { q: "في غياب ATP تماماً داخل الليفة العضلية بعد حدوث الانقباض مباشرة، أي العمليات تتوقف وتكون السبب المباشر للتيبس العضلي؟", options: ["انفصال الروابط المستعرضة عن الأكتين", "تكوين الروابط المستعرضة", "عودة الكالسيوم للشبكة الإندوبلازمية", "تحطيم الأسيتيل كولين"], answer: "انفصال الروابط المستعرضة عن الأكتين" },
+            { q: "كم عدد النتوءات المزدوجة في الفقرة العظمية التي تقع مباشرة أمام الكليتين في الإنسان؟", options: ["3", "2", "4", "6"], answer: "3" },
+            { q: "إذا كان طول المنطقة الداكنة (A) يساوي 1.6 ميكرون وطول (H) أثناء الانبساط 0.4 ميكرون، كم يبلغ مجموع أطوال خيوط الأكتين المتداخلة مع الميوسين داخل القطعة الواحدة؟", options: ["1.2 ميكرون", "0.6 ميكرون", "2.0 ميكرون", "0.8 ميكرون"], answer: "1.2 ميكرون" },
+            { q: "عند دوران راحة اليد من الوضع التشريحي إلى الخلف 180 درجة، أي العبارات تصف حركة العظام بدقة؟", options: ["تتحرك الكعبرة والرسغ معاً", "تتحرك الزند حول الكعبرة الثابتة", "تتحرك الكعبرة والزند بنفس الاتجاه", "يثبت الرسغ وتتحرك الكعبرة فقط"], answer: "تتحرك الكعبرة والرسغ معاً" },
+            { q: "حالق نبات بازلاء التف حول دعامة صلبة، أي التغيرات تحدث في خلايا الجانب البعيد عن الدعامة مقارنة بالملامس لها خلال مرحلة الالتفاف؟", options: ["يزداد الأوكسين وينخفض الضغط الإسموزي", "يزداد الأوكسين ويزداد الضغط الإسموزي", "يقل الأوكسين وينخفض الضغط الإسموزي", "يقل الأوكسين ويزداد ضغط الامتلاء"], answer: "يزداد الأوكسين وينخفض الضغط الإسموزي" },
+            { q: "إذا علمت أن عظمة القص تتصل بغضاريف الضلوع الحقيقية والكاذبة، فكم عدد العظام التي تتصل بعظمة القص اتصالاً مباشراً في البالغ؟", options: ["22", "16", "20", "14"], answer: "22" },
+            { q: "عند حدوث إجهاد لعضلة الساق التوأمية أثناء عدو سريع، ما التغير الكيميائي الذي يحدث في الساركوبلازم وشق التشابك على الترتيب؟", options: ["ينخفض pH، ويزداد حمض الخليك", "يرتفع pH، ويزداد الكولين", "ينخفض pH، وينخفض الكولين", "يرتفع pH، ويزداد الأسيتيل كولين"], answer: "ينخفض pH، ويزداد حمض الخليك" },
+            { q: "إذا تم حقن مادة ترتبط بمستقبلات الأسيتيل كولين على غشاء الساركوليما دون فتح بوابات الصوديوم، ماذا يحدث للعضلة عند وصول سيال؟", options: ["تظل في حالة استقطاب ومنبسطة", "تنقبض بقوة ثم تتعب", "تظل في حالة لا استقطاب وتنقبض", "يحدث لها شد عضلي مباشر"], answer: "تظل في حالة استقطاب ومنبسطة" },
+            { q: "ما النسبة بين عدد عظام الحزام الحوضي فقط إلى عدد عظام الحزام الصدري فقط في إنسان بالغ؟", options: ["1 : 2", "2 : 1", "1 : 4", "4 : 1"], answer: "1 : 2" },
+            { q: "إذا افترضنا استبدال وتر أخيل برباط له نفس الطول والسمك، ما الأثر المترتب على حركة المفصل عند انقباض العضلة التوأمية؟", options: ["تقل كفاءة نقل القوة الميكانيكية", "تزيد سرعة الحركة بشكل كبير", "يحدث تمزق مباشر للرباط", "تتوقف حركة المفصل تماماً"], answer: "تقل كفاءة نقل القوة الميكانيكية" },
+            { q: "أي الحركات التالية تتشابه في آلية حدوثها مع حركة فتح الثغور في أوراق النبات نهاراً؟", options: ["حركة اللمس في المستحية", "حركة الشد في المحاليق", "حركة الانتحاء الضوئي", "حركة الشد في الجذور الكورمات"], answer: "حركة اللمس في المستحية" },
+            { q: "إذا حدث قطع كامل في الرباط الصليبي الأمامي والجانبي للركبة، فأي العظام يفقد ارتباطه المباشر بالفخذ عبر هذين الرباطين؟", options: ["القصبة والشظية معاً", "القصبة فقط", "الشظية فقط", "الرضفة والقصبة"], answer: "القصبة والشظية معاً" },
+            { q: "شخص يعاني من تآكل الغضروف الليفي في منطقة الارتفاق العاني، فأي العظام تتأثر حركتها المحدودة بشكل مباشر؟", options: ["عظمتا العانة البطنيتان الأماميتان", "عظمتا الحرقفة الظهرية", "عظمتا الورك البطنيتان الخلفيتان", "العجز والعصعص"], answer: "عظمتا العانة البطنيتان الأماميتان" },
+            { q: "كم عدد عظام الهيكل الطرفي التي تدخل في تكوين مفاصل زلالية محدودة الحركة في طرف علوي واحد؟", options: ["3", "4", "17", "2"], answer: "3" },
+            { q: "ما وجه الشبه بين الخلايا الحجرية وغضروف الأذن في الإنسان؟", options: ["كلاهما يمثل دعامة تركيبية دائمة", "كلاهما يحتوي على كالسيوم", "كلاهما نسيج حي ذو جدر مغلظة", "كلاهما يفتقر للأوعية الدموية بالكامل"], answer: "كلاهما يمثل دعامة تركيبية دائمة" },
+            { q: "إذا احتوت عضلة هيكلية على 5 حزم، بكل حزمة 40 ليفة، ما النسبة بين عدد الألياف العصبية الحركية وعدد الصفائح النهائية الحركية؟", options: ["1 : 40", "1 : 200", "5 : 40", "1 : 8"], answer: "1 : 40" },
+            { q: "في نبات البصل، ماذا يحدث لو تم قطع الجذور الشادة بعد نموها تحت سطح التربة بمسافة 1 سم فقط؟", options: ["تتعرض الأجزاء الهوائية للتلف بالرياح", "تنمو الجذور بشكل أسرع لتعويض القطع", "يزداد معدل تخزين الغذاء بالبصلة", "لا تتأثر البصلة وتستمر طبيعياً"], answer: "تتعرض الأجزاء الهوائية للتلف بالرياح" },
+            { q: "أي المنحنيات تكون علاقتها عكسية دائماً أثناء انقباض العضلة الهيكلية السليم؟", options: ["طول المنطقة I وعدد الروابط المستعرضة المتصلة", "طول المنطقة A وطول المنطقة H", "كمية الجليكوجين وكمية حمض اللاكتيك المتراكم", "استهلاك ATP وتركيز الكالسيوم بالشبكة"], answer: "طول المنطقة I وعدد الروابط المستعرضة المتصلة" },
+            { q: "أي العوامل التالية يجعل مفصل الكتف الأكثر عرضة للخلع مقارنة بمفصل الفخذ؟", options: ["العمق القليل للتجويف الأروح", "قوة الأربطة المحيطة به", "زيادة كمية السائل الزلالي", "حجم عظمة لوح الكتف الكبير"], answer: "العمق القليل للتجويف الأروح" },
+            { q: "إذا كانت الخلية (س) تعتمد على الدعامة الفسيولوجية فقط، و (ص) تعتمد على التركيبية والفسيولوجية معاً، فمن هما على الترتيب؟", options: ["البارنشيمية وخلايا بشرة الورقة", "البارنشيمية والإسكلرنشيمية", "الكولنشيمية والبارنشيمية", "خلايا الفلين والأنابيب الغربالية"], answer: "البارنشيمية وخلايا بشرة الورقة" },
+            
+            // التنسيق الهرموني
+            { q: "عند إجراء تجربة ستارلينج، حُقن مستخلص الغشاء المخاطي للاثني عشر في الوريد البابي الكبدي لحيوان قُطعت أعصاب بنكرياسه، ماذا يحدث؟", options: ["يفرز البنكرياس عصارته الهاضمة طبيعياً", "يتوقف البنكرياس عن الإفراز", "يفرز البنكرياس الإنسولين فقط", "يتم تنبيه المعدة بدلاً من البنكرياس"], answer: "يفرز البنكرياس عصارته الهاضمة طبيعياً" },
+            { q: "أظهر تحليل مريض انخفاضاً شديداً في TSH وارتفاعاً كبيراً في الثيروكسين بدون وجود ورم بالدرقية، ما التفسير؟", options: ["تناول جرعات دوائية مفرطة من الثيروكسين", "خلل في الفص الأمامي للنخامية", "نقص حاد في عنصر اليود بالغذاء", "تضخم بسيط بالغدة الدرقية"], answer: "تناول جرعات دوائية مفرطة من الثيروكسين" },
+            { q: "إذا تم تدمير الفص الخلفي للنخامية مع بقاء خلايا تحت المهاد العصبية سليمة ومتصلة بالأوعية الدموية، ما الأثر؟", options: ["لا يتأثر حجم البول لفرز الهرمون في الدم مباشرة", "يزداد حجم البول وينخفض ضغط الدم", "ينعدم إفراز ADH تماماً من الجسم", "يتوقف انقباض الرحم أثناء الولادة نهائياً"], answer: "لا يتأثر حجم البول لفرز الهرمون في الدم مباشرة" },
+            { q: "شخص بالغ مصاب بالأكروميجالي، وعلمت أن هرمون GH يزيد مقاومة الخلايا للإنسولين، ما العرض المصاحب لحالته؟", options: ["ارتفاع مستوى الجلوكوز في الدم", "انخفاض الجلوكوز بالدم", "نقص تكسير الجليكوجين", "زيادة تكوين الدهون تحت الجلد"], answer: "ارتفاع مستوى الجلوكوز في الدم" },
+            { q: "أثناء صيام شخص 18 ساعة في يوم حار جداً، أي الهرمونات يرتفع تركيزها معاً في دمه؟", options: ["الجلوكاجون، ADH، الألدوستيرون", "الإنسولين، الكالسيتونين، الثيروكسين", "الجلوكاجون، الأدرينالين، الميلاتونين", "الكورتيزون، الإنسولين، ADH"], answer: "الجلوكاجون، ADH، الألدوستيرون" },
+            { q: "إذا استؤصلت الغدد جارات الدرقية بالخطأ أثناء جراحة للدرقية، ما التغير الذي يطرأ على العضلات والعظام على الترتيب؟", options: ["تشنجات عضلية مؤلمة مع عدم هشاشة العظام", "تشنجات عضلية مؤلمة مع هشاشة عظام", "ارتخاء عضلي وضعف في العظام", "شد عضلي مستمر مع زيادة ترسيب الكالسيوم بالدم"], answer: "تشنجات عضلية مؤلمة مع عدم هشاشة العظام" },
+            { q: "ما النتيجة المترتبة على نقص إفراز الألدوستيرون على حالة الاستقطاب في الخلايا العضلية والعصبية؟", options: ["يختل جهد الراحة نتيجة تراكم K+ ونقص Na+", "يختل جهد الراحة لزيادة الصوديوم ونقص البوتاسيوم", "لا تتأثر حالة الاستقطاب مطلقاً", "يزداد فرق الجهد الكهربي في وقت الراحة"], answer: "يختل جهد الراحة نتيجة تراكم K+ ونقص Na+" },
+            { q: "أي الثنائيات الهرمونية تتفق في الطبيعة الكيميائية لتركيبها (استيرويدات) وتختلف في الغدة المفرزة لها؟", options: ["الألدوستيرون والتستوستيرون", "الإنسولين والجلوكاجون", "الثيروكسين والأدرينالين", "الكورتيزون والباراثورمون"], answer: "الألدوستيرون والتستوستيرون" },
+            { q: "مريض يعاني من تعدد التبول والعطش، وبوله خالي تماماً من الجلوكوز وإسموزيته منخفضة جداً، أي الهرمونات ينقصه؟", options: ["الهرمون القابض للأوعية الدموية (ADH)", "الإنسولين", "الألدوستيرون", "الجلوكاجون"], answer: "الهرمون القابض للأوعية الدموية (ADH)" },
+            { q: "ما سبب حدوث ضمور لقشرة الكظرية عند تناول مريض لجرعات عالية من الكورتيزون لفترات طويلة؟", options: ["تثبيط إفراز هرمون ACTH من النخامية", "زيادة إفراز ACTH كاستجابة عكسية", "تدمير الكورتيزون لخلايا القشرة مباشرة", "نشاط النخاع الزائد يثبط القشرة"], answer: "تثبيط إفراز هرمون ACTH من النخامية" },
+            { q: "أي الهرمونات يحفز انقباض العضلات الملساء في عضو أنثوي، بينما يحفز نمو الغدد في عضو أنثوي آخر على الترتيب؟", options: ["الأوكسيتوسين والبروجسترون", "البرولاكتين والإستروجين", "الأوكسيتوسين والإستروجين", "الريلاكسين والبروجسترون"], answer: "الأوكسيتوسين والبروجسترون" },
+            { q: "عند تناول وجبة غنية بالنشويات والدهون والبروتينات، ما الترتيب الزمني الصحيح لإفراز الهرمونات بدءاً من المعدة؟", options: ["الجاسترين ثم السكرتين ثم الإنسولين", "السكرتين ثم الجاسترين ثم الجلوكاجون", "الإنسولين ثم الجاسترين ثم الكوليسيستوكينين", "الجاسترين ثم الإنسولين ثم السكرتين"], answer: "الجاسترين ثم السكرتين ثم الإنسولين" },
+            { q: "ما وجه الاختلاف بين طريقة تحفيز إفراز الأدرينالين والإنسولين عند تعرض الجسم لمؤثر مفاجئ أو تغير داخلي؟", options: ["الأول بتحفيز عصبي، والثاني بتركيز مادة بالدم", "الأول بتحفيز هرموني، والثاني بتحفيز عصبي", "كلاهما بتحفيز هرموني من النخامية", "الأول يتأثر بالصوديوم، والثاني بالبوتاسيوم"], answer: "الأول بتحفيز عصبي، والثاني بتركيز مادة بالدم" },
+            { q: "الفركتوز يدخل الخلايا دون إنسولين، فلماذا يرتفع تركيزه في الحوصلة المنوية؟", options: ["لتغذية الحيوانات المنوية دون استهلاك الإنسولين", "لأنه السكر الوحيد المتاح في الخصية", "لأنه يتحول إلى جلوكوز داخل الحيوان المنوي", "لتقليل حموضة مجرى البول"], answer: "لتغذية الحيوانات المنوية دون استهلاك الإنسولين" },
+            { q: "امرأة حامل في الشهر الخامس حدث لها تلف كامل في الجسم الأصفر، ما أثر ذلك على استمرار الحمل؟", options: ["يستمر الحمل طبيعياً لإفراز المشيمة للبروجسترون", "يحدث إجهاض فوري لنقص البروجسترون", "تتشوه الأجنة لنقص هرمونات المبيض", "تتأخر الولادة عن موعدها الطبيعي"], answer: "يستمر الحمل طبيعياً لإفراز المشيمة للبروجسترون" },
+            { q: "أي الحالات تتشابه في ظهور عرض (سرعة الانفعال والتهيج العصبي) رغم اختلاف الغدة المسببة؟", options: ["التضخم الجحوظي ونقص إفراز الباراثورمون", "الميكسيديما وزيادة إفراز الباراثورمون", "البول السكري وقصور قشرة الكظرية", "العملقة ونقص هرمون ADH"], answer: "التضخم الجحوظي ونقص إفراز الباراثورمون" },
+            { q: "ما التغير الذي يطرأ على تركيز الجليكوجين بالكبد والجلوكوز بالوريد الكبدي بعد حقن شخص بالجلوكاجون؟", options: ["يقل الجليكوجين، ويزداد الجلوكوز بالوريد الكبدي", "يزداد الجليكوجين، ويقل الجلوكوز بالوريد", "لا يتأثر الجليكوجين، ويزداد الجلوكوز", "يقل كلاهما معاً"], answer: "يقل الجليكوجين، ويزداد الجلوكوز بالوريد الكبدي" },
+            { q: "أي الهرمونات يؤثر في نسيج غير غدي، ويُفرز من خلايا عصبية مفرزة؟", options: ["الهرمون المضاد لإدرار البول (ADH)", "هرمون النمو (GH)", "هرمون الثيروكسين", "الهرمون المنبه للغدة الدرقية (TSH)"], answer: "الهرمون المضاد لإدرار البول (ADH)" },
+            { q: "عند الهروب من حيوان مفترس، كيف يتكامل عمل الأدرينالين والثيروكسين مع العضلات الهيكلية؟", options: ["يوفر الأول الجلوكوز، ويزيد الثاني معدل أكسدته", "الأول يقلل الدم للعضلات، والثاني يبني بروتين العضلة", "كلاهما يزيد تخزين الجليكوجين في العضلة", "الأول يقبض العضلة، والثاني يبسطها"], answer: "يوفر الأول الجلوكوز، ويزيد الثاني معدل أكسدته" },
+            { q: "صفيحة ميكا غير منفذة وُضعت في الجانب المظلم أسفل قمة بادرة شوفان مُعرضة لضوء جانبي، ماذا يحدث للساق؟", options: ["تنمو رأسياً دون أن تنتحي نحو الضوء", "تنتحي نحو الضوء بشدة", "تذبل وتموت لانقطاع الأوكسينات", "تنتحي بعيداً عن الضوء"], answer: "تنمو رأسياً دون أن تنتحي نحو الضوء" },
+            { q: "ما أقصى عدد من الغدد جارات الدرقية يتبقى في شخص إذا استؤصل فص واحد كامل من الدرقية والبرزخ؟", options: ["2", "1", "0", "4"], answer: "2" },
+            { q: "شخص لديه جفاف جلد وسمنة مفرطة. فحصنا مستوى TSH والثيروكسين لديه ووجدناهما منخفضين معاً، أين الخلل؟", options: ["قصور في الفص الأمامي للغدة النخامية", "قصور في الغدة الدرقية فقط", "فرط نشاط الغدة الدرقية", "نقص شديد في اليود بالغذاء"], answer: "قصور في الفص الأمامي للغدة النخامية" },
+            { q: "كم عدد الهرمونات التي تفرزها النخامية وتؤثر مباشرة على المناسل، وهرمونات قشرة الكظرية المشابهة للجنسية على الترتيب؟", options: ["2 ، مجموعة واحدة", "4 ، مجموعتان", "3 ، لا شيء", "2 ، 3 مجموعات"], answer: "2 ، مجموعة واحدة" },
+            { q: "أي العبارات تصف العلاقة الصحيحة بين هرمون الكالسيتونين، وهشاشة العظام، وانقباض العضلات؟", options: ["يحافظ على الدعامة العظمية، ولا يمنع انقباض العضلات", "يسبب هشاشة العظام ويمنع انقباض العضلات", "يضعف العظام ويزيد الانقباض العضلي", "لا يؤثر على العظام ولكنه ضروري للانقباض"], answer: "يحافظ على الدعامة العظمية، ولا يمنع انقباض العضلات" },
+            { q: "إذا تُناول الإنسولين والثيروكسين عن طريق الفم، أيهما يحتفظ بفعاليته الفسيولوجية ولماذا؟", options: ["الثيروكسين فقط؛ لأنه حمض أميني لا تهضمه البروتيازات كلياً", "الإنسولين لأنه بروتين معقد", "كلاهما يفقد فعاليته بالهضم", "كلاهما يحتفظ بفعاليته لامتصاصهما السريع"], answer: "الثيروكسين فقط؛ لأنه حمض أميني لا تهضمه البروتيازات كلياً" }
+        ];
+
+        let studentName = "";
+        let currentQIndex = 0;
+        let score = 0;
+        let attempt = 0; // 0 for 1st try, 1 for 2nd try
+        let timeLeft = 45 * 60; // 45 mins
+        let timerInterval;
+        let reportData = []; 
+
+        const UI = {
+            start: document.getElementById('start-screen'),
+            quiz: document.getElementById('quiz-screen'),
+            load: document.getElementById('loading-screen'),
+            result: document.getElementById('result-screen'),
+            nameInput: document.getElementById('student-name'),
+            nameError: document.getElementById('name-error'),
+            qText: document.getElementById('question-text'),
+            optContainer: document.getElementById('options-container'),
+            qNum: document.getElementById('current-q-num'),
+            timer: document.getElementById('timer'),
+            progress: document.getElementById('progress-bar'),
+            toast: document.getElementById('toast'),
+            percentDisplay: document.getElementById('final-percentage'),
+            nameDisplay: document.getElementById('student-name-display')
+        };
+
+        function showToast() {
+            UI.toast.classList.add('show');
+            setTimeout(() => UI.toast.classList.remove('show'), 3000);
+        }
+
+        function startExam() {
+            const name = UI.nameInput.value.trim();
+            if (name.length < 3) {
+                UI.nameError.classList.remove('hidden');
+                return;
+            }
+            studentName = name;
+            UI.start.classList.add('hidden');
+            UI.quiz.classList.remove('hidden');
+            UI.quiz.classList.add('flex');
+            
+            startTimer();
+            loadQuestion();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                let s = (timeLeft % 60).toString().padStart(2, '0');
+                UI.timer.innerText = `${m}:${s}`;
+                
+                if (timeLeft <= 60 && !UI.timer.classList.contains('timer-danger')) {
+                    UI.timer.classList.add('timer-danger');
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    finishExam(true); 
+                }
+            }, 1000);
+        }
+
+        function loadQuestion() {
+            attempt = 0; 
+            const q = questions[currentQIndex];
+            
+            UI.qNum.innerText = currentQIndex + 1;
+            UI.qText.innerText = q.q;
+            UI.optContainer.innerHTML = ''; 
+
+            // Progress bar mapping (RTL so width applies from right based on flex/positioning setup)
+            const progressPct = ((currentQIndex) / questions.length) * 100;
+            UI.progress.style.width = `${progressPct}%`;
+
+            q.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-right p-4 rounded-xl text-gray-200 font-semibold text-lg md:text-xl focus:outline-none';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(btn, opt, q.answer);
+                UI.optContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(btn, selected, correct) {
+            const allBtns = UI.optContainer.querySelectorAll('button');
+            const isCorrect = (selected === correct);
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score++;
+                logAnswer(selected, correct, attempt === 0 ? 'صحيحة من المحاولة الأولى' : 'صحيحة من المحاولة الثانية');
+                allBtns.forEach(b => b.disabled = true);
+                setTimeout(nextQuestion, 1500); 
+            } else {
+                if (attempt === 0) {
+                    // First wrong attempt
+                    attempt++;
+                    btn.classList.add('wrong');
+                    btn.disabled = true;
+                    showToast();
+                } else {
+                    // Second wrong attempt
+                    btn.classList.add('wrong');
+                    allBtns.forEach(b => {
+                        b.disabled = true;
+                        if (b.innerText === correct) {
+                            b.classList.add('correct'); 
+                        }
+                    });
+                    logAnswer(selected, correct, 'خاطئة (استنفد المحاولتين)');
+                    setTimeout(nextQuestion, 2000); 
+                }
+            }
+        }
+
+        function logAnswer(studentAns, correctAns, status) {
+            reportData.push({
+                q: questions[currentQIndex].q,
+                sAns: studentAns,
+                cAns: correctAns,
+                stat: status
+            });
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            if (currentQIndex >= questions.length) {
+                finishExam(false);
+            } else {
+                loadQuestion();
+            }
+        }
+
+        function finishExam(isTimeout) {
+            clearInterval(timerInterval);
+            
+            // Log if timeout interrupted a question
+            if (reportData.length < questions.length && isTimeout) {
+                 logAnswer("لم يُجب (انتهى الوقت)", questions[currentQIndex].answer, "لم يتم الحل");
+            }
+
+            UI.quiz.classList.add('hidden');
+            UI.quiz.classList.remove('flex');
+            UI.load.classList.remove('hidden');
+            UI.load.classList.add('flex');
+
+            submitData();
+        }
+
+        async function submitData() {
+            const percentage = ((score / questions.length) * 100).toFixed(1);
+            
+            let reportText = ``;
+            reportData.forEach((item, i) => {
+                reportText += `[سؤال ${i+1}]: ${item.q}\nإجابته: ${item.sAns}\nالصحيحة: ${item.cAns}\nالتقييم: ${item.stat}\n----------------------------------\n`;
+            });
+
+            const payload = {
+                'اسم الطالب': studentName,
+                'النتيجة': `${score} من ${questions.length} (${percentage}%)`,
+                'تفاصيل الإجابات': reportText
+            };
+
+            try {
+                const response = await fetch(FORMSPREE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    showFinal(percentage);
+                } else {
+                    alert("عذراً، حدث خطأ أثناء إرسال النتيجة. يرجى إبلاغ المعلم.");
+                    showFinal(percentage);
+                }
+            } catch (err) {
+                alert("تعذر الاتصال بالخادم، لكن تم حساب درجتك.");
+                showFinal(percentage);
+            }
+        }
+
+        function showFinal(percent) {
+            UI.load.classList.add('hidden');
+            UI.load.classList.remove('flex');
+            UI.result.classList.remove('hidden');
+            UI.result.classList.add('flex');
+
+            UI.nameDisplay.innerText = studentName;
+            UI.percentDisplay.innerText = `${percent}%`;
+
+            if(percent >= 85) UI.percentDisplay.className = "text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600 drop-shadow-lg";
+            else if (percent >= 60) UI.percentDisplay.className = "text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 drop-shadow-lg";
+            else UI.percentDisplay.className = "text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-pink-600 drop-shadow-lg";
+        }
+    </script>
+</body>
+</html>
+```
